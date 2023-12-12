@@ -1,7 +1,6 @@
 using System.Collections.Immutable;
 
 List<char> PossibleChars = new List<char>() { '.', '#' };
-char Wildcard = '?';
 var Cache = new Dictionary<Record, long>();
 
 Solve();
