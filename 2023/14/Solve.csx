@@ -28,10 +28,7 @@ void SolvePartTwo(char[][] grid, List<Coordinate> roundRockCoordinates)
         (grid, roundRockCoordinates) = ShiftRoundRocks(grid, roundRockCoordinates, ShiftDirection.North);
         (grid, roundRockCoordinates) = ShiftRoundRocks(grid, roundRockCoordinates, ShiftDirection.West);
         (grid, roundRockCoordinates) = ShiftRoundRocks(grid, roundRockCoordinates, ShiftDirection.South);
-        (grid, roundRockCoordinates) = ShiftRoundRocks(
-            grid,
-            roundRockCoordinates,
-            ShiftDirection.East
+        (grid, roundRockCoordinates) = ShiftRoundRocks(grid, roundRockCoordinates, ShiftDirection.East
         );
         iterations--;
 
@@ -52,8 +49,7 @@ void SolvePartTwo(char[][] grid, List<Coordinate> roundRockCoordinates)
         break;
     }
 
-    var weight = CalculateRoundRocksWeight(roundRockCoordinates, grid.Length);
-    Console.WriteLine($"Part two: {weight}");
+    Console.WriteLine($"Part two: {CalculateRoundRocksWeight(roundRockCoordinates, grid.Length)}");
 }
 
 (char[][], List<Coordinate>) ParseGrid(string[] input)
@@ -171,10 +167,11 @@ void SolvePartTwo(char[][] grid, List<Coordinate> roundRockCoordinates)
     }
 }
 
-long CalculateRoundRocksWeight(List<Coordinate> roundRockCoordinates, int heightOfGrid) =>
-    roundRockCoordinates.Sum(coordinate => heightOfGrid - coordinate.Y);
+long CalculateRoundRocksWeight(List<Coordinate> roundRockCoordinates, int heightOfGrid)
+    => roundRockCoordinates.Sum(coordinate => heightOfGrid - coordinate.Y);
 
-string GridToString(char[][] grid) => string.Join("", grid.Select(line => string.Join("", line)));
+string GridToString(char[][] grid)
+    => string.Join("", grid.Select(line => string.Join("", line)));
 
 enum ShiftDirection
 {
