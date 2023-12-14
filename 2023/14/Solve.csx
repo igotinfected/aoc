@@ -5,309 +5,183 @@ Solve();
 void Solve()
 {
     var input = File.ReadAllLines(@"input.txt");
-    var grid = ParseGrid(input);
+    var (grid, roundRockCoordinates) = ParseGrid(input);
 
+    SolvePartOne(grid, roundRockCoordinates);
+    SolvePartTwo(grid, roundRockCoordinates);
+}
+
+void SolvePartOne(char[][] grid, List<Coordinate> roundRockCoordinates)
+{
+    var copyOfGrid = grid.Select(line => line.ToArray()).ToArray();
+    (copyOfGrid, var newRoundRockCoordinates) = ShiftRoundRocks(copyOfGrid, roundRockCoordinates, ShiftDirection.North);
+    Console.WriteLine($"Part one: {CalculateRoundRocksWeight(newRoundRockCoordinates, copyOfGrid.Length)}");
+}
+
+void SolvePartTwo(char[][] grid, List<Coordinate> roundRockCoordinates)
+{
     Dictionary<string, int> seen = new();
-    var iterations = 1_000_000_000L;
+    var iterations = 1_000_000_000;
     while (iterations > 0)
     {
-        seen[GridAsString(grid)] = 1_000_000_000 - (int)iterations;
-        Console.WriteLine($"Iteration: {1_000_000_000 - iterations}");
+        seen[GridToString(grid)] = 1_000_000_000 - iterations;
+        (grid, roundRockCoordinates) = ShiftRoundRocks(grid, roundRockCoordinates, ShiftDirection.North);
+        (grid, roundRockCoordinates) = ShiftRoundRocks(grid, roundRockCoordinates, ShiftDirection.West);
+        (grid, roundRockCoordinates) = ShiftRoundRocks(grid, roundRockCoordinates, ShiftDirection.South);
+        (grid, roundRockCoordinates) = ShiftRoundRocks(
+            grid,
+            roundRockCoordinates,
+            ShiftDirection.East
+        );
         iterations--;
-        grid = ShiftRoundRocksUp(grid);
-        grid = ShiftRoundRocksLeft(grid);
-        grid = ShiftRoundRocksDown(grid);
-        grid = ShiftRoundRocksRight(grid);
-        if (seen.Keys.Contains(GridAsString(grid)))
-        {
-            Console.WriteLine($"Found duplicate after {1_000_000_000 - iterations} iterations");
-            // cycle was detected so calculate how many iterations we have to do aft accounting for the cycle
-            var cycleLength = seen[GridAsString(grid)];
-            var remainingIterations = iterations % cycleLength;
-            Console.WriteLine($"Remaining iterations: {remainingIterations}");
 
-            for (int i = 0; i < remainingIterations; i++)
+        if (seen.Keys.Contains(GridToString(grid)) is false)
+        {
+            continue;
+        }
+
+        var remainingIterations = iterations % (1_000_000_000 - iterations - seen[GridToString(grid)]);
+        for (int i = 0; i < remainingIterations; i++)
+        {
+            (grid, roundRockCoordinates) = ShiftRoundRocks(grid, roundRockCoordinates, ShiftDirection.North);
+            (grid, roundRockCoordinates) = ShiftRoundRocks(grid, roundRockCoordinates, ShiftDirection.West);
+            (grid, roundRockCoordinates) = ShiftRoundRocks(grid, roundRockCoordinates, ShiftDirection.South);
+            (grid, roundRockCoordinates) = ShiftRoundRocks(grid, roundRockCoordinates, ShiftDirection.East);
+        }
+
+        break;
+    }
+
+    var weight = CalculateRoundRocksWeight(roundRockCoordinates, grid.Length);
+    Console.WriteLine($"Part two: {weight}");
+}
+
+(char[][], List<Coordinate>) ParseGrid(string[] input)
+{
+    var grid = input.Select(line => line.ToCharArray()).ToArray();
+    var roundRockCoordinates = new List<Coordinate>();
+    for (int y = 0; y < grid.Length; y++)
+    {
+        for (int x = 0; x < grid[0].Length; x++)
+        {
+            if (grid[y][x] == 'O')
             {
-                grid = ShiftRoundRocksUp(grid);
-                grid = ShiftRoundRocksLeft(grid);
-                grid = ShiftRoundRocksDown(grid);
-                grid = ShiftRoundRocksRight(grid);
+                roundRockCoordinates.Add(new Coordinate(x, y));
             }
-            break;
         }
     }
-    var weight = CalculateRoundRocksWeight(grid);
-    Console.WriteLine($"Weight: {weight}");
+    return (grid, roundRockCoordinates);
 }
 
-string GridAsString(Grid grid)
+(char[][], List<Coordinate>) ShiftRoundRocks(
+    char[][] grid,
+    List<Coordinate> roundRockCoordinates,
+    ShiftDirection direction)
 {
-    var coordinates = grid.Coordinates;
-    var width = grid.Width;
-    var height = grid.Height;
-    var gridAsString = "";
-    for (int y = 0; y < height; y++)
+    var newRoundRockCoordinates = new List<Coordinate>();
+    var sortedRoundedCoordinates = direction switch
     {
-        var line = "";
-        for (int x = 0; x < width; x++)
-        {
-            var coordinate = coordinates.FirstOrDefault(c => c.X == x && c.Y == y);
-            line += coordinate.Type switch
-            {
-                FieldType.Empty => '.',
-                FieldType.RoundRock => 'O',
-                FieldType.SquareRock => '#',
-                _ => throw new Exception($"Unknown field type {coordinate.Type}")
-            };
-        }
-        gridAsString += line + "\n";
-    }
-    return gridAsString;
-}
+        ShiftDirection.North => roundRockCoordinates
+            .OrderBy(coordinate => coordinate.Y)
+            .ToList(),
+        ShiftDirection.West => roundRockCoordinates
+            .OrderBy(coordinate => coordinate.X)
+            .ToList(),
+        ShiftDirection.South => roundRockCoordinates
+            .OrderByDescending(coordinate => coordinate.Y)
+            .ToList(),
+        ShiftDirection.East => roundRockCoordinates
+            .OrderByDescending(coordinate => coordinate.X)
+            .ToList(),
+        _ => throw new Exception("Unknown direction")
+    };
 
-void DrawGrid(Grid grid)
-{
-    var coordinates = grid.Coordinates;
-    var width = grid.Width;
-    var height = grid.Height;
-    for (int y = 0; y < height; y++)
+    foreach (var coordinate in sortedRoundedCoordinates)
     {
-        var line = "";
-        for (int x = 0; x < width; x++)
+        var x = coordinate.X;
+        var y = coordinate.Y;
+
+        var newCoordinate = direction switch
         {
-            var coordinate = coordinates.FirstOrDefault(c => c.X == x && c.Y == y);
-            line += coordinate.Type switch
-            {
-                FieldType.Empty => '.',
-                FieldType.RoundRock => 'O',
-                FieldType.SquareRock => '#',
-                _ => throw new Exception($"Unknown field type {coordinate.Type}")
-            };
+            ShiftDirection.North => ShiftRoundRockNorth(coordinate, grid),
+            ShiftDirection.West => ShiftRoundRockWest(coordinate, grid),
+            ShiftDirection.South => ShiftRoundRockSouth(coordinate, grid),
+            ShiftDirection.East => ShiftRoundRockEast(coordinate, grid),
+            _ => throw new Exception("Unknown direction")
+        };
+
+        if (newCoordinate.X != x || newCoordinate.Y != y)
+        {
+            grid[y][x] = '.';
+            grid[newCoordinate.Y][newCoordinate.X] = 'O';
         }
-        Console.WriteLine(line);
+
+        newRoundRockCoordinates.Add(newCoordinate);
     }
-    Console.WriteLine();
-}
 
-long GCD(long a, long b) => b == 0 ? a : GCD(b, a % b);
+    return (grid, newRoundRockCoordinates);
 
-Grid ParseGrid(string[] input)
-{
-    var width = input[0].Length;
-    var height = input.Length;
-    var coordinates = new List<Coordinate>();
-    for (int y = 0; y < height; y++)
+    Coordinate ShiftRoundRockNorth(Coordinate coordinate, char[][] grid)
     {
-        var line = input[y];
-        for (int x = 0; x < width; x++)
+        var x = coordinate.X;
+        var y = coordinate.Y;
+
+        while (y > 0 && grid[y - 1][x] == '.')
         {
-            var type = line[x] switch
-            {
-                '.' => FieldType.Empty,
-                'O' => FieldType.RoundRock,
-                '#' => FieldType.SquareRock,
-                _ => throw new Exception($"Unknown field type {line[x]}")
-            };
-            coordinates.Add(new Coordinate(x, y, type));
+            y--;
         }
+
+        return y == coordinate.Y ? coordinate : new Coordinate(x, y);
     }
-    return new Grid(width, height, coordinates);
-}
-
-Grid ShiftRoundRocksUp(Grid grid)
-{
-    var coordinates = grid.Coordinates;
-    var width = grid.Width;
-    var height = grid.Height;
-
-    for (int i = 1; i < grid.Height; i++)
+    Coordinate ShiftRoundRockWest(Coordinate coordinate, char[][] grid)
     {
-        var rocksInRow = coordinates.Where(c => c.Y == i && c.Type == FieldType.RoundRock).ToList();
-        foreach (var rock in rocksInRow)
+        var x = coordinate.X;
+        var y = coordinate.Y;
+
+        while (x > 0 && grid[y][x - 1] == '.')
         {
-            var coordinatesAbove = coordinates
-                .Where(c => c.X == rock.X && c.Y < rock.Y)
-                .OrderByDescending(c => c.Y)
-                .ToList();
-            var blockingCoordinate = coordinatesAbove.FirstOrDefault(
-                c => c.Type == FieldType.SquareRock || c.Type == FieldType.RoundRock
-            );
-            if (blockingCoordinate is not null)
-            {
-                var coordinateToSwapWith = coordinatesAbove.FirstOrDefault(
-                    c => c.Y == blockingCoordinate.Y + 1,
-                    rock
-                );
-                coordinates.Remove(coordinateToSwapWith);
-                coordinates.Remove(rock);
-                coordinates.Add(
-                    new Coordinate(rock.X, coordinateToSwapWith.Y, FieldType.RoundRock)
-                );
-                coordinates.Add(new Coordinate(rock.X, rock.Y, FieldType.Empty));
-                continue;
-            }
-            coordinates.Remove(coordinatesAbove.Last());
-            coordinates.Remove(rock);
-            coordinates.Add(new Coordinate(rock.X, coordinatesAbove.Last().Y, FieldType.RoundRock));
-            coordinates.Add(new Coordinate(rock.X, rock.Y, FieldType.Empty));
+            x--;
         }
+
+        return x == coordinate.X ? coordinate : new Coordinate(x, y);
     }
-    return new Grid(width, height, coordinates);
-}
-
-Grid ShiftRoundRocksDown(Grid grid)
-{
-    var coordinates = grid.Coordinates;
-    var width = grid.Width;
-    var height = grid.Height;
-
-    for (int i = grid.Height - 2; i >= 0; i--)
+    Coordinate ShiftRoundRockSouth(Coordinate coordinate, char[][] grid)
     {
-        var rocksInRow = coordinates.Where(c => c.Y == i && c.Type == FieldType.RoundRock).ToList();
-        foreach (var rock in rocksInRow)
+        var x = coordinate.X;
+        var y = coordinate.Y;
+
+        while (y < grid.Length - 1 && grid[y + 1][x] == '.')
         {
-            var coordinatesAbove = coordinates
-                .Where(c => c.X == rock.X && c.Y > rock.Y)
-                .OrderBy(c => c.Y)
-                .ToList();
-            var blockingCoordinate = coordinatesAbove.FirstOrDefault(
-                c => c.Type == FieldType.SquareRock || c.Type == FieldType.RoundRock
-            );
-            if (blockingCoordinate is not null)
-            {
-                var coordinateToSwapWith = coordinatesAbove.FirstOrDefault(
-                    c => c.Y == blockingCoordinate.Y - 1,
-                    rock
-                );
-                coordinates.Remove(coordinateToSwapWith);
-                coordinates.Remove(rock);
-                coordinates.Add(
-                    new Coordinate(rock.X, coordinateToSwapWith.Y, FieldType.RoundRock)
-                );
-                coordinates.Add(new Coordinate(rock.X, rock.Y, FieldType.Empty));
-                continue;
-            }
-            coordinates.Remove(coordinatesAbove.Last());
-            coordinates.Remove(rock);
-            coordinates.Add(new Coordinate(rock.X, coordinatesAbove.Last().Y, FieldType.RoundRock));
-            coordinates.Add(new Coordinate(rock.X, rock.Y, FieldType.Empty));
+            y++;
         }
+
+        return y == coordinate.Y ? coordinate : new Coordinate(x, y);
     }
-    return new Grid(width, height, coordinates);
-}
-
-Grid ShiftRoundRocksLeft(Grid grid)
-{
-    var coordinates = grid.Coordinates;
-    var width = grid.Width;
-    var height = grid.Height;
-
-    for (int i = 1; i < grid.Width; i++)
+    Coordinate ShiftRoundRockEast(Coordinate coordinate, char[][] grid)
     {
-        var rocksInColumn = coordinates
-            .Where(c => c.X == i && c.Type == FieldType.RoundRock)
-            .ToList();
-        foreach (var rock in rocksInColumn)
+        var x = coordinate.X;
+        var y = coordinate.Y;
+
+        while (x < grid[0].Length - 1 && grid[y][x + 1] == '.')
         {
-            var coordinatesLeft = coordinates
-                .Where(c => c.Y == rock.Y && c.X < rock.X)
-                .OrderByDescending(c => c.X)
-                .ToList();
-            var blockingCoordinate = coordinatesLeft.FirstOrDefault(
-                c => c.Type == FieldType.SquareRock || c.Type == FieldType.RoundRock
-            );
-            if (blockingCoordinate is not null)
-            {
-                var coordinateToSwapWith = coordinatesLeft.FirstOrDefault(
-                    c => c.X == blockingCoordinate.X + 1,
-                    rock
-                );
-                coordinates.Remove(coordinateToSwapWith);
-                coordinates.Remove(rock);
-                coordinates.Add(
-                    new Coordinate(coordinateToSwapWith.X, rock.Y, FieldType.RoundRock)
-                );
-                coordinates.Add(new Coordinate(rock.X, rock.Y, FieldType.Empty));
-                continue;
-            }
-            coordinates.Remove(coordinatesLeft.Last());
-            coordinates.Remove(rock);
-            coordinates.Add(new Coordinate(coordinatesLeft.Last().X, rock.Y, FieldType.RoundRock));
-            coordinates.Add(new Coordinate(rock.X, rock.Y, FieldType.Empty));
+            x++;
         }
+
+        return x == coordinate.X ? coordinate : new Coordinate(x, y);
     }
-    return new Grid(width, height, coordinates);
 }
 
-Grid ShiftRoundRocksRight(Grid grid)
+long CalculateRoundRocksWeight(List<Coordinate> roundRockCoordinates, int heightOfGrid) =>
+    roundRockCoordinates.Sum(coordinate => heightOfGrid - coordinate.Y);
+
+string GridToString(char[][] grid) => string.Join("", grid.Select(line => string.Join("", line)));
+
+enum ShiftDirection
 {
-    var coordinates = grid.Coordinates;
-    var width = grid.Width;
-    var height = grid.Height;
-
-    for (int i = grid.Width - 2; i >= 0; i--)
-    {
-        var rocksInColumn = coordinates
-            .Where(c => c.X == i && c.Type == FieldType.RoundRock)
-            .ToList();
-        foreach (var rock in rocksInColumn)
-        {
-            var coordinatesRight = coordinates
-                .Where(c => c.Y == rock.Y && c.X > rock.X)
-                .OrderBy(c => c.X)
-                .ToList();
-            var blockingCoordinate = coordinatesRight.FirstOrDefault(
-                c => c.Type == FieldType.SquareRock || c.Type == FieldType.RoundRock
-            );
-            if (blockingCoordinate is not null)
-            {
-                var coordinateToSwapWith = coordinatesRight.FirstOrDefault(
-                    c => c.X == blockingCoordinate.X - 1,
-                    rock
-                );
-                coordinates.Remove(coordinateToSwapWith);
-                coordinates.Remove(rock);
-                coordinates.Add(
-                    new Coordinate(coordinateToSwapWith.X, rock.Y, FieldType.RoundRock)
-                );
-                coordinates.Add(new Coordinate(rock.X, rock.Y, FieldType.Empty));
-                continue;
-            }
-            coordinates.Remove(coordinatesRight.Last());
-            coordinates.Remove(rock);
-            coordinates.Add(new Coordinate(coordinatesRight.Last().X, rock.Y, FieldType.RoundRock));
-            coordinates.Add(new Coordinate(rock.X, rock.Y, FieldType.Empty));
-        }
-    }
-    return new Grid(width, height, coordinates);
+    North,
+    West,
+    South,
+    East
 }
 
-long CalculateRoundRocksWeight(Grid grid)
-{
-    var coordinates = grid.Coordinates;
-    var width = grid.Width;
-    var height = grid.Height;
-    var weight = 1L;
-    var totalWeight = 0L;
-    for (int y = grid.Height - 1; y >= 0; y--)
-    {
-        var rocksInRow = coordinates.Where(c => c.Y == y && c.Type == FieldType.RoundRock).ToList();
-        foreach (var rock in rocksInRow)
-        {
-            totalWeight += weight;
-        }
-        weight++;
-    }
-    return totalWeight;
-}
-
-record Grid(int Width, int Height, List<Coordinate> Coordinates);
-
-record Coordinate(int X, int Y, FieldType Type);
-
-enum FieldType
-{
-    Empty = '.',
-    RoundRock = 'O',
-    SquareRock = '#'
-}
+record Coordinate(int X, int Y);
