@@ -16,9 +16,9 @@ void SolvePartOne(string input)
 
 void SolvePartTwo(string input)
 {
-    var hashMaps = Enumerable.Range(0, 256)
-        .Select(i => new Dictionary<string, (int, int)>())
-        .ToList();
+    var hashMaps = Enumerable
+        .Range(0, 256)
+        .Select(i => new Dictionary<string, (int, int)>());
     var listOfHashMaps = new List<Dictionary<string, (int, int)>>(hashMaps);
 
     input.Split(',')
@@ -55,7 +55,6 @@ void ApplyOperation(string input, List<Dictionary<string, (int, int)>> hashMap)
     var indexOfOperation = input.IndexOfAny(new char[] { '-', '=' });
     var hash = Hash(input[..indexOfOperation]);
     var operation = input[indexOfOperation];
-
 
     var exists = hashMap[hash].TryGetValue(input[..indexOfOperation], out var item);
     if (operation == '-')
