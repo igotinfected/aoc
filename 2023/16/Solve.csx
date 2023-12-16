@@ -14,7 +14,7 @@ void Solve()
 void SolvePartOne(string[] grid)
 {
     var startingBeam = new Beam(new Coordinate(0, 0), 1, 0);
-    var result = FindNumberOfEnergizedTilesV2(startingBeam, grid).Count;
+    var result = FindNumberOfEnergizedTiles(startingBeam, grid).Count;
     Console.WriteLine($"Part 1: {result}");
 }
 
@@ -77,7 +77,7 @@ Beam GenerateNewBeam(Beam beam, int vx, int vy)
             vy
         );
 
-HashSet<Coordinate> FindNumberOfEnergizedTilesV2(Beam startingBeam, string[] grid)
+HashSet<Coordinate> FindNumberOfEnergizedTiles(Beam startingBeam, string[] grid)
 {
     var energizedTiles = new HashSet<Coordinate>() { startingBeam.currentLocation };
     var beamCache = new HashSet<Beam>(new BeamComparer());
@@ -126,7 +126,7 @@ void ProcessBeam(Beam beam, int gridWidth, int gridHeight, HashSet<Coordinate> e
     beamCache.Add(beam);
 }
 
-record Beam(Coordinate currentLocation, int VelocityX, int VelocityY);
+record Beam(Coordinate CurrentLocation, int VelocityX, int VelocityY);
 
 class BeamComparer : IEqualityComparer<Beam>
 {
